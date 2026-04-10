@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STMS · Signal Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f4f7f6;--bg2:#ffffff;--bg3:#f0f3f5;--panel:rgba(255,255,255,0.95);--border:#e0e6ed;--accent:#0a66c2;--accent2:#ff6b00;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--text:#1f2937;--text2:#6b7280;--glow:0 8px 30px rgba(0,0,0,0.06);--font-hd:'Exo 2',sans-serif;--font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;min-height:100vh;overflow-x:hidden}
+
+  /* Animated grid bg */
+  body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;animation:gridDrift 20s linear infinite}
+  @keyframes gridDrift{0%{transform:translate(0,0)}100%{transform:translate(40px,40px)}}
+
+  /* Floating particles */
+  .particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .particle{position:absolute;width:2px;height:2px;background:var(--accent);border-radius:50%;opacity:0;animation:floatP linear infinite}
+  @keyframes floatP{0%{opacity:0;transform:translateY(100vh) scale(0)}10%{opacity:.5}90%{opacity:.5}100%{opacity:0;transform:translateY(-10vh) scale(1)}}
+
+  .wrapper{position:relative;z-index:1}
+
+  /* Topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px;background:rgba(255,255,255,.95);border-bottom:1px solid var(--border);backdrop-filter:blur(20px) saturate(1.4);position:sticky;top:0;z-index:100;animation:slideDown .5s cubic-bezier(.16,1,.3,1)}
+  @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#0066aa);border-radius:6px;display:grid;place-items:center;font-size:18px;animation:brandPulse 3s ease-in-out infinite}
+  @keyframes brandPulse{0%,100%{box-shadow:0 0 15px rgba(0,212,255,.3)}50%{box-shadow:0 0 25px rgba(0,212,255,.6)}}
+  .brand-name{font-family:var(--font-hd);font-weight:800;font-size:20px;letter-spacing:2px;color:var(--text)}
+  .brand-name span{color:var(--accent)}
+  nav{display:flex;gap:4px}
+  .nav-btn{padding:6px 16px;background:transparent;border:1px solid transparent;border-radius:4px;color:var(--text2);font-family:var(--font-ui);font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;text-decoration:none;transition:all .25s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+  .nav-btn::after{content:'';position:absolute;bottom:0;left:50%;width:0;height:2px;background:var(--accent);transition:all .3s cubic-bezier(.16,1,.3,1);transform:translateX(-50%)}
+  .nav-btn:hover::after,.nav-btn.active::after{width:80%}
+  .nav-btn:hover,.nav-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+
+  .content{padding:28px;max-width:1300px;margin:0 auto}
+
+  /* Page header */
+  .page-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;animation:fadeInUp .5s ease}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+  .page-title{font-family:var(--font-hd);font-size:26px;font-weight:800;letter-spacing:2px}
+  .page-title span{color:var(--accent)}
+
+  /* Buttons */
+  .btn{padding:9px 20px;border-radius:6px;border:none;font-family:var(--font-ui);font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:6px;position:relative;overflow:hidden}
+  .btn::after{content:'';position:absolute;width:100%;height:100%;top:0;left:0;background:radial-gradient(circle,rgba(255,255,255,.2)10%,transparent 10%);transform:scale(10);opacity:0;transition:transform .5s,opacity .5s}
+  .btn:active::after{transform:scale(0);opacity:1;transition:0s}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:var(--glow)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,.5)}
+  .btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border)}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+
+  /* Signal grid */
+  .signals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+
+  /* Signal card */
+  .signal-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;
+    transition:transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s,border-color .3s;
+    position:relative;overflow:hidden;
+    animation:cardIn .5s cubic-bezier(.16,1,.3,1) backwards;
+  }
+  .signal-card:hover{transform:translateY(-4px) scale(1.015);box-shadow:0 8px 30px rgba(0,212,255,.15);border-color:rgba(0,212,255,.3)}
+  /* Shimmer on hover */
+  .signal-card::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.02),transparent);transition:none}
+  .signal-card:hover::after{animation:shimmer .8s ease}
+  @keyframes shimmer{to{left:100%}}
+  @keyframes cardIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+  .signal-card .loc{font-weight:700;font-size:14px;margin-bottom:14px;color:var(--text)}
+
+  /* Traffic light */
+  .traffic-light{display:flex;flex-direction:column;gap:8px;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:16px 20px;width:80px;margin:0 auto 14px;box-shadow:inset 0 2px 10px rgba(0,0,0,.05)}
+  .tl-dot{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.05);transition:all .4s cubic-bezier(.16,1,.3,1)}
+  .tl-dot.r-on{background:var(--red);box-shadow:0 0 16px var(--red)}
+  .tl-dot.y-on{background:var(--yellow);box-shadow:0 0 16px var(--yellow)}
+  .tl-dot.g-on{background:var(--green);box-shadow:0 0 16px var(--green)}
+
+  /* Countdown */
+  .countdown-display{text-align:center;margin:10px 0 6px}
+  .countdown-num{font-family:var(--font-hd);font-size:36px;font-weight:800;letter-spacing:2px;transition:color .3s,transform .15s}
+  .countdown-num.green{color:var(--green);}
+  .countdown-num.yellow{color:var(--yellow);}
+  .countdown-num.red{color:var(--red);}
+  .countdown-label{font-size:10px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+
+  /* Progress bar */
+  .progress-bar{width:100%;height:4px;background:rgba(255,255,255,.05);border-radius:2px;margin:10px 0;overflow:hidden}
+  .progress-fill{height:100%;border-radius:2px;transition:width 1s linear,background .3s}
+  .progress-fill.green{background:linear-gradient(90deg,var(--green),rgba(0,255,136,.6))}
+  .progress-fill.yellow{background:linear-gradient(90deg,var(--yellow),rgba(255,204,0,.6))}
+  .progress-fill.red{background:linear-gradient(90deg,var(--red),rgba(255,45,85,.6))}
+
+  /* Timing row */
+  .timing-row{display:flex;justify-content:space-between;margin-bottom:8px}
+  .timing-item{text-align:center}
+  .t-label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+  .t-val{font-family:var(--font-hd);font-size:22px;font-weight:800}
+  .t-val.green{color:var(--green)}.t-val.red{color:var(--red)}
+
+  /* Mode badge */
+  .mode-badge{text-align:center;margin-top:6px}
+  .mbadge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:2px;font-family:var(--font-mono);transition:all .3s}
+  .mbadge.NORMAL{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.3)}
+  .mbadge.ADAPTIVE{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3)}
+  .mbadge.EMERGENCY{background:rgba(255,45,85,.2);color:var(--red);border:1px solid rgba(255,45,85,.4);animation:pulse-emg 1.5s infinite}
+  @keyframes pulse-emg{0%,100%{opacity:1;box-shadow:0 0 0 rgba(255,45,85,0)}50%{opacity:.7;box-shadow:0 0 15px rgba(255,45,85,.3)}}
+
+  .spinner{width:20px;height:20px;border-radius:50%;border:2px solid rgba(0,212,255,.2);border-top-color:var(--accent);animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Toast */
+  #toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+  .toast{background:rgba(10,21,32,.95);border:1px solid var(--border);backdrop-filter:blur(12px);border-radius:10px;padding:14px 18px;min-width:300px;display:flex;align-items:center;gap:10px;animation:toastIn .4s cubic-bezier(.16,1,.3,1);font-size:13px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .toast.success{border-left:3px solid var(--green)}.toast.info{border-left:3px solid var(--accent)}
+  .toast.exiting{animation:toastOut .3s ease forwards}
+  @keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes toastOut{to{transform:translateX(120%);opacity:0}}
+
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+<div class="wrapper">
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon" style="color:#fff; font-family:var(--font-mono); font-weight:bold; font-size:16px;">SC</div>
+    <div class="brand-name">ST<span>MS</span></div>
+  </div>
+  <nav>
+    <a href="/" class="nav-btn">DASHBOARD</a>
+    <a href="/signals" class="nav-btn active">SIGNALS</a>
+    <a href="/routes-page" class="nav-btn">ROUTES</a>
+    <a href="/reports-page" class="nav-btn">REPORTS</a>
+    <a href="/emergency-page" class="nav-btn">EMERGENCY</a>
+  </nav>
+  <div></div>
+</div>
+<div class="content">
+  <div class="page-hd">
+    <div class="page-title">SIGNAL <span>CONTROL</span></div>
+  </div>
+  <div class="signals-grid" id="signal-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text2)"><div class="spinner"></div><p style="margin-top:12px">Loading signals…</p></div>
+  </div>
+</div>
+</div>
+<div id="toast-container"></div>
+<script>
+// Particles
+(function(){const c=document.getElementById('particles');for(let i=0;i<25;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.animationDuration=(8+Math.random()*15)+'s';p.style.animationDelay=(Math.random()*10)+'s';p.style.width=p.style.height=(1+Math.random()*2)+'px';c.appendChild(p)}})();
+
+function toast(msg,type='info') { return; }
+
+// ── Signal cycling state ──────────────────────────────────────
+const YELLOW_DURATION = 3;
+let signalTimers = {};
+
+function initSignalTimer(s) {
+  if (s.mode === 'MANUAL' || s.mode === 'EMERGENCY') {
+    signalTimers[s.signal_id] = { phase: s.status, remaining: '--', greenTime: s.green_time, redTime: s.red_time, mode: s.mode, locked: true };
+    return;
+  }
+  const stagger = s.signal_id * 3;
+  const nowTs = Math.floor(Date.now() / 1000) + stagger;
+  const cycle = s.green_time + YELLOW_DURATION + s.red_time + YELLOW_DURATION;
+  const elapsed = nowTs % cycle;
+  let phase, remaining;
+  if (elapsed < s.green_time) { phase = 'GREEN'; remaining = s.green_time - elapsed; }
+  else if (elapsed < s.green_time + YELLOW_DURATION) { phase = 'YELLOW_TO_RED'; remaining = YELLOW_DURATION - (elapsed - s.green_time); }
+  else if (elapsed < s.green_time + YELLOW_DURATION + s.red_time) { phase = 'RED'; remaining = s.red_time - (elapsed - s.green_time - YELLOW_DURATION); }
+  else { phase = 'YELLOW_TO_GREEN'; remaining = YELLOW_DURATION - (elapsed - s.green_time - YELLOW_DURATION - s.red_time); }
+  signalTimers[s.signal_id] = { phase, remaining: Math.max(1, Math.ceil(remaining)), greenTime: s.green_time, redTime: s.red_time, mode: s.mode };
+}
+
+function tickSignals() {
+  for (const id in signalTimers) {
+    const t = signalTimers[id];
+    if (t.locked) {
+      updateSignalUI(id);
+      continue;
+    }
+    t.remaining--;
+    if (t.remaining <= 0) {
+      switch (t.phase) {
+        case 'GREEN': t.phase = 'YELLOW_TO_RED'; t.remaining = YELLOW_DURATION; break;
+        case 'YELLOW_TO_RED': t.phase = 'RED'; t.remaining = t.redTime; break;
+        case 'RED': t.phase = 'YELLOW_TO_GREEN'; t.remaining = YELLOW_DURATION; break;
+        case 'YELLOW_TO_GREEN': t.phase = 'GREEN'; t.remaining = t.greenTime; break;
+      }
+    }
+    updateSignalUI(id);
+  }
+}
+
+function updateSignalUI(id) {
+  const t = signalTimers[id];
+  if (!t) return;
+  const card = document.getElementById('sig-' + id);
+  if (!card) return;
+  const dotR = card.querySelector('.dot-r'), dotY = card.querySelector('.dot-y'), dotG = card.querySelector('.dot-g');
+  const countNum = card.querySelector('.countdown-num'), countLabel = card.querySelector('.countdown-label');
+  const progFill = card.querySelector('.progress-fill');
+  dotR.className = 'tl-dot dot-r'; dotY.className = 'tl-dot dot-y'; dotG.className = 'tl-dot dot-g';
+  let colorClass, totalPhaseTime, label;
+  switch (t.phase) {
+    case 'GREEN': dotG.classList.add('g-on'); colorClass = 'green'; totalPhaseTime = t.greenTime; label = 'GREEN PHASE'; break;
+    case 'YELLOW_TO_RED': case 'YELLOW_TO_GREEN': dotY.classList.add('y-on'); colorClass = 'yellow'; totalPhaseTime = YELLOW_DURATION; label = 'CHANGING…'; break;
+    case 'RED': dotR.classList.add('r-on'); colorClass = 'red'; totalPhaseTime = t.redTime; label = 'RED PHASE'; break;
+  }
+  countNum.textContent = t.remaining;
+  countNum.className = 'countdown-num ' + colorClass;
+  countLabel.textContent = label;
+  let pct = (t.remaining / totalPhaseTime) * 100;
+  if(t.locked) { pct = 100; countLabel.textContent = 'LOCKED'; }
+  progFill.style.width = pct + '%';
+  progFill.className = 'progress-fill ' + colorClass;
+}
+
+async function loadSignals() {
+  const d = await fetch('/api/signal-control').then(r => r.json());
+  const grid = document.getElementById('signal-grid');
+  if (!d.signals || d.signals.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text2)">No signals found.</div>';
+    return;
+  }
+  const needsRebuild = grid.querySelectorAll('.signal-card').length !== d.signals.length;
+  if (needsRebuild) {
+    grid.innerHTML = d.signals.map((s, i) => {
+      return '<div class="signal-card" id="sig-' + s.signal_id + '" style="animation-delay:' + (i * 60) + 'ms">' +
+        '<div class="loc">' + s.location + '</div>' +
+        '<div class="traffic-light">' +
+          '<div class="tl-dot dot-r"></div><div class="tl-dot dot-y"></div><div class="tl-dot dot-g"></div>' +
+        '</div>' +
+        '<div class="countdown-display">' +
+          '<div class="countdown-num green">--</div>' +
+          '<div class="countdown-label">LOADING</div>' +
+        '</div>' +
+        '<div class="progress-bar"><div class="progress-fill green" style="width:100%"></div></div>' +
+        '<div class="timing-row">' +
+          '<div class="timing-item"><div class="t-label">Green</div><div class="t-val green">' + s.green_time + 's</div></div>' +
+          '<div class="timing-item"><div class="t-label">Red</div><div class="t-val red">' + s.red_time + 's</div></div>' +
+        '</div>' +
+        '<div class="mode-badge"><span class="mbadge ' + s.mode + '">' + s.mode + '</span></div>' +
+        '<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">' +
+          '<div style="font-size:10px; color:var(--text2); letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">Admin Controls</div>' +
+          '<div style="display:flex; gap:6px;">' +
+            '<button class="btn btn-outline" style="flex:1; padding:4px 0; font-size:11px; border-color:var(--green); color:var(--green);" onclick="forceSignal(' + s.signal_id + ', \'GREEN\', \'MANUAL\')">GREEN</button>' +
+            '<button class="btn btn-outline" style="flex:1; padding:4px 0; font-size:11px; border-color:var(--red); color:var(--red);" onclick="forceSignal(' + s.signal_id + ', \'RED\', \'MANUAL\')">RED</button>' +
+            '<button class="btn btn-outline" style="flex:1; padding:4px 0; font-size:11px;" onclick="forceSignal(' + s.signal_id + ', \'GREEN\', \'ADAPTIVE\')">AUTO</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  d.signals.forEach((s) => {
+    if (!signalTimers[s.signal_id] || signalTimers[s.signal_id].mode !== s.mode || (signalTimers[s.signal_id].phase !== s.status && s.mode === 'MANUAL')) {
+      initSignalTimer(s);
+    } else {
+      signalTimers[s.signal_id].greenTime = s.green_time;
+      signalTimers[s.signal_id].redTime = s.red_time;
+      signalTimers[s.signal_id].mode = s.mode;
+      const card = document.getElementById('sig-' + s.signal_id);
+      if (card) {
+        const vals = card.querySelectorAll('.t-val');
+        vals[0].textContent = s.green_time + 's'; vals[1].textContent = s.red_time + 's';
+        const badge = card.querySelector('.mbadge');
+        badge.textContent = s.mode; badge.className = 'mbadge ' + s.mode;
+      }
+    }
+    updateSignalUI(s.signal_id);
+  });
+}
+
+async function syncAll() {
+  toast('Syncing signals with live traffic data…', 'info');
+  const d = await fetch('/api/signal-control/update-all', {method: 'POST'}).then(r => r.json());
+  toast('Updated ' + d.updated + ' signals to adaptive timing', 'success');
+  signalTimers = {};
+  loadSignals();
+}
+
+async function forceSignal(id, status, mode) {
+  let redTime = 30, greenTime = 45;
+  if(mode === 'MANUAL') {
+     if(status === 'GREEN') { greenTime = 999; redTime = 1; }
+     if(status === 'RED') { redTime = 999; greenTime = 1; }
+  }
+  toast(`Overriding signal controls…`, 'info');
+  await fetch(`/api/signal-control/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: mode, status: status, green_time: greenTime, red_time: redTime })
+  });
+  toast('Signal overriden to ' + mode, 'success');
+  delete signalTimers[id]; // force timer re-init
+  loadSignals();
+}
+
+loadSignals();
+setInterval(tickSignals, 1000);
+setInterval(loadSignals, 30000);
+</script>
+</body>
+</html>

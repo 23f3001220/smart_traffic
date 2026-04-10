@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STMS · Admin Control</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #f4f7f6;
+    --bg2:      #ffffff;
+    --bg3:      #f0f3f5;
+    --panel:    rgba(255, 255, 255, 0.95);
+    --border:   #e0e6ed;
+    --accent:   #0a66c2;
+    --accent2:  #e27129;
+    --green:    #10b981;
+    --red:      #ef4444;
+    --yellow:   #f59e0b;
+    --text:     #1f2937;
+    --text2:    #6b7280;
+    --glow:     0 8px 30px rgba(0,0,0,0.06);
+    --font-hd:  'Exo 2', sans-serif;
+    --font-mono:'Share Tech Mono', monospace;
+    --font-ui:  'Rajdhani', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html {
+    margin: 0; padding: 0; width: 100%; height: 100vh;
+    font-family: var(--font-ui); color: var(--text);
+    overflow: hidden; background: var(--bg);
+  }
+
+  /* ── MAP ── */
+  #traffic-map {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10;
+  }
+  .leaflet-control-zoom { border: 1px solid var(--border) !important; }
+  .leaflet-bar a { background-color: var(--bg2) !important; color: var(--text) !important; border-bottom: 1px solid var(--border) !important; }
+  .leaflet-bar a:hover { background-color: var(--border) !important; color: var(--accent) !important; }
+  .leaflet-popup-content-wrapper { background: var(--bg2); color: var(--text); border: 1px solid var(--accent); border-radius: 8px; box-shadow: var(--glow); padding: 0; }
+  .leaflet-popup-tip { background: var(--bg2); border: 1px solid var(--accent); }
+  .leaflet-popup-content { margin: 12px; }
+
+  /* ══ FLOATING HEADER ══ */
+  .topbar {
+    position: absolute; top: 16px; right: 16px; z-index: 100;
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    background: var(--panel); padding: 8px 16px;
+    border: 1px solid var(--border); border-radius: 8px;
+    backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  }
+  .nav-btn {
+    padding: 6px 12px; border-radius: 4px; border: 1px solid transparent;
+    color: var(--text2); font-weight: 600; text-decoration: none; cursor: pointer; transition: all .2s; background: transparent; font-family:var(--font-ui);
+  }
+  .nav-btn:hover { background: rgba(0,212,255,0.06); color: var(--accent); border-color: var(--accent); }
+
+  /* ══ SIDEBAR ══ */
+  .sidebar {
+    position: absolute; top: 16px; left: 16px; bottom: 16px;
+    width: 380px; z-index: 100; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+    display: flex; flex-direction: column; backdrop-filter: blur(16px) saturate(1.4);
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 20px; border-bottom: 1px solid var(--border);
+    background: rgba(0,212,255,0.03); display: flex; align-items: center; gap: 12px;
+  }
+  .brand-icon {
+    width: 36px; height: 36px; background: linear-gradient(135deg, var(--red), var(--accent2));
+    border-radius: 6px; display: grid; place-items: center; font-size: 18px; box-shadow: 0 0 10px rgba(255,45,85,0.3);
+  }
+  .brand-name { font-family: var(--font-hd); font-weight: 800; font-size: 20px; letter-spacing: 2px; color: var(--text); }
+  .brand-name span { color: var(--accent2); }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    flex: 1; padding: 12px; font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+    color: var(--text2); background: transparent; border: none; border-bottom: 2px solid transparent;
+    cursor: pointer; transition: 0.3s; letter-spacing: 1px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(0,212,255,0.05); }
+  .tab-content { flex: 1; overflow-y: auto; padding: 16px; display: none; }
+  .tab-content.active { display: block; }
+  .sidebar-content::-webkit-scrollbar { width: 4px; }
+  .sidebar-content::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Route Toggle Cards */
+  .route-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .toggle-switch {
+    position: relative; display: inline-block; width: 40px; height: 20px;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--border); transition: .4s; border-radius: 20px;
+  }
+  .slider:before {
+    position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+    background-color: var(--text2); transition: .4s; border-radius: 50%;
+  }
+  input:checked + .slider { background-color: rgba(0,212,255,0.3); border: 1px solid var(--accent); }
+  input:checked + .slider:before { transform: translateX(20px); background-color: var(--accent); }
+  .route-disabled { opacity: 0.5; }
+
+  /* Signal list mini */
+  .sig-mini { display: flex; align-items: center; gap: 8px; padding: 10px; border-bottom: 1px solid var(--border); }
+  .sig-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Popup buttons */
+  .popup-btn {
+    width: 100%; padding: 6px; margin-top: 6px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px; font-family: var(--font-mono); font-size: 11px; cursor: pointer; transition: 0.2s;
+  }
+  .popup-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.1); }
+  
+  .badge { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 1px; font-family: var(--font-mono); }
+  .badge.HIGH   { background: rgba(255,45,85,.15); color: var(--red); border: 1px solid rgba(255,45,85,.3); }
+  .badge.MEDIUM { background: rgba(255,204,0,.15); color: var(--yellow); border: 1px solid rgba(255,204,0,.3); }
+  .badge.LOW    { background: rgba(0,255,136,.15); color: var(--green); border: 1px solid rgba(0,255,136,.3); }
+
+</style>
+</head>
+<body>
+
+<div id="traffic-map"></div>
+
+<div class="topbar">
+  <!-- Legacy Pages Navigation -->
+  <div style="display:flex; gap: 4px; padding-right: 12px; border-right: 1px solid var(--border);">
+    <a href="/admin_dashboard" class="nav-btn" style="color:var(--accent);">MAP</a>
+    <a href="/signals" class="nav-btn">SIGNALS</a>
+    <a href="/routes-page" class="nav-btn">ROUTES</a>
+    <a href="/reports-page" class="nav-btn">REPORTS</a>
+    <a href="/emergency-page" class="nav-btn">EMERGENCY</a>
+    <a href="/uml" class="nav-btn">UML</a>
+  </div>
+
+  <!-- Admin Global Actions -->
+
+  <div style="font-size: 13px; color: var(--text); padding: 0 12px; border-left: 1px solid var(--border);"><b>{{ current_user.username }}</b></div>
+  <a href="/logout" class="nav-btn" style="color: var(--red);">LOGOUT</a>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="brand-icon" style="color:#fff; font-family:var(--font-mono); font-weight:bold; font-size:16px;">AD</div>
+    <div class="brand-name">ST<span>MS</span></div>
+    <div style="font-size:10px; letter-spacing:2px; color:var(--text2); margin-left:8px;">COMMAND<br>CENTRAL</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('network')">NETWORK ROUTES</button>
+    <button class="tab-btn" onclick="switchTab('signals')">SIGNALS STATUS</button>
+    <button class="tab-btn" onclick="switchTab('congestion')">CONGESTION</button>
+  </div>
+
+  <!-- NETWORK ROUTES TAB -->
+  <div id="tab-network" class="tab-content sidebar-content active">
+    <div style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+      Toggle specific routes ON or OFF. Disabled routes will be completely ignored by the traffic pathfinding algorithm.
+    </div>
+    <div id="routes-list">
+      <div style="text-align:center; padding: 20px; color:var(--text2);">Loading network topography...</div>
+    </div>
+  </div>
+
+  <!-- SIGNALS TAB -->
+  <div id="tab-signals" class="tab-content sidebar-content">
+    <div style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+      Live signal light statuses. Click a marker on the map to manually override a specific intersection.
+    </div>
+    <div id="signals-list"></div>
+  </div>
+
+  <!-- CONGESTION TAB -->
+  <div id="tab-congestion" class="tab-content sidebar-content">
+    <div style="font-size:12px; color:var(--text2); margin-bottom:16px;">
+      Real-time system-wide congestion metrics and latest automated traffic alerts.
+    </div>
+    <div id="congestion-stats" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+      <div style="padding:10px; color:var(--text2); text-align:center;">Loading KPI stats...</div>
+    </div>
+    <div id="chartOrigContainer" style="background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:16px; position:relative; height:260px;">
+      <button onclick="expandChart()" style="position:absolute; top:8px; right:8px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); cursor:pointer; font-size:10px; padding:4px 8px; transition:0.2s; z-index:10; font-weight:600;">EXPAND</button>
+      <div id="chartWrapper" style="position:relative; height:100%; width:100%;">
+        <canvas id="congestionChart" style="margin-top:10px;"></canvas>
+      </div>
+    </div>
+    <div style="font-size:11px; font-weight:700; color:var(--text2); letter-spacing:1px; margin-bottom:10px; border-top:1px solid var(--border); padding-top:16px;">LIVE ALERT FEED</div>
+    <div id="congestion-reports">
+      <div style="padding:10px; color:var(--text2); text-align:center;">Loading reports...</div>
+    </div>
+  </div>
+</div>
+
+<!-- FULLSCREEN CHART MODAL -->
+<div id="chartModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:9999; backdrop-filter:blur(10px); padding:40px; flex-direction:column;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <h2 style="font-family:var(--font-hd); color:var(--accent); letter-spacing:1px;">Live Network Congestion</h2>
+    <button onclick="closeChart()" style="padding:10px 20px; background:var(--panel); color:var(--red); border:1px solid var(--red); border-radius:6px; cursor:pointer; font-weight:700; transition:0.2s;">CLOSE EXPLORER</button>
+  </div>
+  <div id="chartModalContainer" style="flex:1; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; position:relative; min-height:0;">
+    <!-- Canvas docks here when expanded -->
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const API = '/api';
+let trafficMap = null;
+let mapLayerGroup = null;
+let routeLineGroup = null;
+let signalDataCache = []; // to link map markers to signal ids
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function initMap() {
+  trafficMap = L.map('traffic-map', {zoomControl: false}).setView([30.9, 75.85], 13);
+  L.control.zoom({position: 'bottomright'}).addTo(trafficMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(trafficMap);
+  routeLineGroup = L.layerGroup().addTo(trafficMap);
+  mapLayerGroup = L.layerGroup().addTo(trafficMap);
+}
+document.addEventListener('DOMContentLoaded', initMap);
+
+async function apiFetch(path, options = {}) {
+  const r = await fetch(API + path, options);
+  return r.json();
+}
+
+// ── ADMIN GLOBAL ACTIONS ──
+async function seedData() {
+  await apiFetch('/routes/seed', {method: 'POST'});
+  await apiFetch('/reports/generate', {method: 'POST'});
+  
+  refreshAll();
+}
+
+async function simulateData() {
+  await apiFetch('/traffic-data/simulate', {method: 'POST'});
+  
+  refreshAll();
+}
+
+async function syncAllSignals() {
+  await apiFetch('/signal-control/update-all', {method: 'POST'});
+  refreshAll();
+}
+
+// ── NETWORK ROUTES TAB ──
+async function loadRoutes() {
+  const res = await apiFetch('/routes');
+  const list = document.getElementById('routes-list');
+  if(!res.routes || res.routes.length===0){
+    list.innerHTML = `<div style="text-align:center; padding:20px; color:red;">No routes found. Click Seed Map.</div>`;
+    return;
+  }
+  
+  // Render route list with toggles
+  list.innerHTML = res.routes.map(r => `
+    <div class="route-card ${r.is_recommended ? '' : 'route-disabled'}">
+      <div style="flex:1;">
+        <div style="font-size:13px; font-weight:600; color:var(--text);">${r.start_point} ➝ ${r.end_point}</div>
+        <div style="font-size:11px; color:var(--text2); font-family:var(--font-mono); margin-top:2px;">
+          Status: <span style="color:${r.is_recommended?'var(--green)':'var(--red)'}">${r.is_recommended ? 'ENABLED' : 'DISABLED'}</span>
+        </div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" ${r.is_recommended ? 'checked' : ''} onchange="toggleRoute(${r.route_id}, this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+  `).join('');
+
+  // Draw ALL route lines on the map faintly
+  routeLineGroup.clearLayers();
+  // Need coordinates for routes. We can derive them from analysisData if we have it.
+}
+
+async function toggleRoute(id, newState) {
+  await apiFetch(`/routes/${id}/toggle`, {
+    method: 'PUT',
+    body: JSON.stringify({is_recommended: newState})
+  });
+  loadRoutes(); // refresh list
+}
+
+function getVirtualStatus(s) {
+  if (s.mode === 'MANUAL' || s.mode === 'EMERGENCY') return s.status;
+  const stagger = s.signal_id * 3;
+  const nowTs = Math.floor(Date.now() / 1000) + stagger;
+  const yellowTime = 3;
+  const cycle = s.green_time + yellowTime + s.red_time + yellowTime;
+  const elapsed = nowTs % cycle;
+  if (elapsed < s.green_time) return "GREEN";
+  if (elapsed < s.green_time + yellowTime) return "YELLOW";
+  if (elapsed < s.green_time + yellowTime + s.red_time) return "RED";
+  return "YELLOW";
+}
+
+// ── SIGNALS AND MAP RENDERING ──
+async function loadSignalsAndMap() {
+  // Fetch signals
+  const sigRes = await apiFetch('/signal-control');
+  signalDataCache = sigRes.signals || [];
+  
+  // Render sidebar signals list
+  const list = document.getElementById('signals-list');
+  const colors = { GREEN: 'var(--green)', RED: 'var(--red)', YELLOW: 'var(--yellow)' };
+  list.innerHTML = signalDataCache.map(s => {
+    const vStatus = getVirtualStatus(s);
+    return `
+    <div class="sig-mini">
+      <div class="sig-dot" style="background:${colors[vStatus]||'grey'}; box-shadow: 0 0 8px ${colors[vStatus]||'grey'};"></div>
+      <div style="flex:1;">
+        <div style="font-size:13px; color:var(--text); font-weight:600;">${s.location}</div>
+        <div style="font-size:11px; color:var(--text2); font-family:var(--font-mono);">Mode: ${s.mode} | G:${s.green_time}s R:${s.red_time}s</div>
+      </div>
+    </div>
+  `}).join('');
+
+  // Plot interactive nodes
+  const analysisData = await apiFetch('/analyze');
+  const nodes = analysisData.analysis || [];
+  
+  mapLayerGroup.clearLayers();
+  
+  let bounds = new L.LatLngBounds();
+  let hasLocation = false;
+
+  nodes.forEach(n => {
+    if (n.latitude && n.longitude) {
+      hasLocation = true;
+      bounds.extend([n.latitude, n.longitude]);
+      
+      // Find matching signal 
+      const sig = signalDataCache.find(s => s.location === n.location);
+      let sigHTML = "";
+      if (sig) {
+        sigHTML = `
+          <div style="margin-top:10px; border-top:1px solid var(--border); padding-top:10px;">
+            <div style="font-size:10px; color:var(--text2); margin-bottom:4px; letter-spacing:1px;">SIGNAL CONTROL CONSOLE</div>
+            <div style="font-family:var(--font-mono); font-size:12px; margin-bottom:8px; color:${colors[sig.status]}">Current: ${sig.status} (${sig.mode})</div>
+            <button class="popup-btn" onclick="forceSignal(${sig.signal_id}, 'GREEN', 'MANUAL')">FORCE GREEN</button>
+            <button class="popup-btn" onclick="forceSignal(${sig.signal_id}, 'RED', 'MANUAL')" style="border-color:rgba(255,45,85,0.3)">FORCE RED</button>
+            <button class="popup-btn" onclick="forceSignal(${sig.signal_id}, '${sig.status}', 'ADAPTIVE')" style="border-color:rgba(255,204,0,0.3)">SET ADAPTIVE AUTO</button>
+          </div>
+        `;
+      } else {
+        sigHTML = `<div style="margin-top:10px; font-size:11px; color:var(--text2);">No Signal Hardware At Intersection</div>`;
+      }
+
+      const popupContent = `
+        <div style="min-width: 180px;">
+          <h3 style="margin:0 0 4px 0; font-family:var(--font-hd); color:var(--accent); font-size:16px;">${n.location}</h3>
+          <div style="font-size:12px; color:var(--text2); font-family:var(--font-mono);">
+            Vehicles: ${n.vehicle_count}<br>
+            Congestion: ${n.congestion_level}
+          </div>
+          ${sigHTML}
+        </div>
+      `;
+
+      const vStatus = sig ? getVirtualStatus(sig) : null;
+      L.circleMarker([n.latitude, n.longitude], {
+        radius: 12, fillColor: sig ? colors[vStatus] : '#555',
+        color: '#fff', weight: 2, opacity: 0.9, fillOpacity: 0.6
+      }).addTo(mapLayerGroup).bindPopup(popupContent);
+    }
+  });
+
+  // Only fit bounds initially or if explicitly needed, so we don't snap the map while admin is working
+  if (hasLocation && window.firstLoad) {
+    trafficMap.fitBounds(bounds, {paddingTopLeft: [400, 50], paddingBottomRight: [50, 50]});
+    window.firstLoad = false;
+  }
+}
+
+// Called from popup
+window.forceSignal = async function(id, st, mode) {
+  trafficMap.closePopup();
+  await apiFetch(`/signal-control/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({status: st, mode: mode})
+  });
+  loadSignalsAndMap(); // refresh
+}
+
+// ── CONGESTION TAB RENDERING ──
+async function loadCongestionData() {
+  const summary = await apiFetch('/traffic-data/summary');
+  const reports = await apiFetch('/reports');
+
+  // Render Stats
+  const statsDiv = document.getElementById('congestion-stats');
+  if(!summary.error) {
+    statsDiv.innerHTML = `
+      <div style="flex:1; min-width:100px; background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+        <span style="font-size:10px; color:var(--text2); letter-spacing:1px; font-weight:700;">TOTAL HIGH</span>
+        <span style="font-size:20px; font-family:var(--font-mono); color:var(--red); font-weight:700;">${summary.high_congestion}</span>
+      </div>
+      <div style="flex:1; min-width:100px; background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+        <span style="font-size:10px; color:var(--text2); letter-spacing:1px; font-weight:700;">AVG SPEED</span>
+        <span style="font-size:20px; font-family:var(--font-mono); color:var(--accent); font-weight:700;">${summary.avg_speed_kmh} <span style="font-size:11px; color:var(--text2);">km/h</span></span>
+      </div>
+      <div style="width:100%; min-width:200px; background:var(--bg2); border:1px solid var(--border); padding:12px; border-radius:8px; display:flex; flex-direction:column; gap:4px;">
+        <span style="font-size:10px; color:var(--text2); letter-spacing:1px; font-weight:700;">AVG VEHICLE VOL.</span>
+        <span style="font-size:20px; font-family:var(--font-mono); color:var(--text); font-weight:700;">${summary.avg_vehicle_count} <span style="font-size:11px; color:var(--text2);">/ junction</span></span>
+      </div>
+    `;
+  }
+
+  // Render Reports
+  const rptsDiv = document.getElementById('congestion-reports');
+  if(!reports.reports || reports.reports.length === 0) {
+    rptsDiv.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text2);">No current reports.</div>`;
+  } else {
+    rptsDiv.innerHTML = reports.reports.map(r => {
+      const bColor = r.congestion_level === 'HIGH' ? 'var(--red)' : (r.congestion_level === 'MEDIUM' ? 'var(--yellow)' : 'var(--green)');
+      return `
+      <div class="alert-item" style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+        <div style="width:4px; border-radius:2px; background:${bColor};"></div>
+        <div style="flex:1;">
+          <div class="alert-loc" style="font-weight:700; color:var(--text);">${r.location} <span class="badge ${r.congestion_level}" style="float:right;">${r.congestion_level}</span></div>
+          <div class="alert-msg" style="color:var(--text); font-size:12px; margin-top:4px;">${r.alert_message}</div>
+          <div style="font-size:10px; color:var(--text2); margin-top:6px; font-family:var(--font-mono);">${new Date(r.generated_time).toLocaleTimeString()}</div>
+        </div>
+      </div>
+    `}).join('');
+  }
+
+  // Render Chart
+  const analysisData = await apiFetch('/analyze');
+  if (!analysisData.error && analysisData.analysis) {
+    const labels = analysisData.analysis.map(a => a.location);
+    const data = analysisData.analysis.map(a => a.vehicle_count);
+    
+    if (window.congestionChartInst) {
+      window.congestionChartInst.data.labels = labels;
+      window.congestionChartInst.data.datasets[0].data = data;
+      window.congestionChartInst.update();
+    } else {
+      const ctx = document.getElementById('congestionChart').getContext('2d');
+      window.congestionChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Vehicles per Junction',
+            data: data,
+            backgroundColor: 'rgba(0, 212, 255, 0.4)',
+            borderColor: '#00d4ff',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: 'rgba(26, 48, 80, 0.4)' }, ticks: { color: '#5a7a90' } },
+            x: { grid: { display: false }, ticks: { color: '#5a7a90', maxRotation: 45, minRotation: 45 } }
+          }
+        }
+      });
+    }
+  }
+}
+
+// ── CHART EXPANSION LOGIC ──
+function expandChart() {
+  const wrapper = document.getElementById('chartWrapper');
+  document.getElementById('chartModalContainer').appendChild(wrapper);
+  document.getElementById('chartModal').style.display = 'flex';
+  if(window.congestionChartInst) window.congestionChartInst.resize();
+}
+
+function closeChart() {
+  const wrapper = document.getElementById('chartWrapper');
+  document.getElementById('chartOrigContainer').appendChild(wrapper);
+  document.getElementById('chartModal').style.display = 'none';
+  if(window.congestionChartInst) window.congestionChartInst.resize();
+}
+
+function refreshAll() {
+  loadRoutes();
+  loadSignalsAndMap();
+  loadCongestionData();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.firstLoad = true;
+  refreshAll();
+  // Auto refresh statuses
+  setInterval(refreshAll, 20000);
+});
+</script>
+</body>
+</html>

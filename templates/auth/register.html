@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STMS · Register</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --panel: #ffffff;
+    --border: #e0e6ed;
+    --accent: #0a66c2;
+    --text: #1f2937;
+    --text2: #6b7280;
+    --font-ui: 'Rajdhani', sans-serif;
+    --font-hd: 'Exo 2', sans-serif;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .login-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 40px;
+    border-radius: 10px;
+    width: 320px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    text-align: center;
+  }
+  .login-title {
+    font-family: var(--font-hd);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+  }
+  .login-title span {
+    color: var(--accent);
+  }
+  .input-group {
+    margin-bottom: 16px;
+    text-align: left;
+  }
+  .input-group label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text2);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 10px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+  }
+  .input-group input:focus {
+    border-color: var(--accent);
+  }
+  .btn-submit {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    font-family: var(--font-ui);
+    letter-spacing: 1px;
+  }
+  .error-msg {
+    color: #ff2d55;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="login-title">ST<span>MS</span> REGISTER</div>
+  {% if error %}
+    <div class="error-msg">{{ error }}</div>
+  {% endif %}
+  <form method="POST">
+    <div class="input-group">
+      <label>New Username</label>
+      <input type="text" name="username" required autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label>New Password</label>
+      <input type="password" name="password" required>
+    </div>
+    <button type="submit" class="btn-submit">CREATE ACCOUNT</button>
+  </form>
+  <div style="margin-top: 16px; font-size: 13px; color: var(--text2);">
+    Already have an account? <a href="/login" style="color: var(--accent); text-decoration: none;">Login</a>
+  </div>
+</div>
+
+</body>
+</html>

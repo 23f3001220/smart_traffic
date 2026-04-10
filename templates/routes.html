@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STMS · Route Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&family=Exo+2:wght@300;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f4f7f6;--bg2:#ffffff;--bg3:#f0f3f5;--panel:rgba(255,255,255,0.95);--border:#e0e6ed;--accent:#0a66c2;--green:#10b981;--red:#ef4444;--yellow:#f59e0b;--text:#1f2937;--text2:#6b7280;--glow:0 8px 30px rgba(0,0,0,0.06);--font-hd:'Exo 2',sans-serif;--font-mono:'Share Tech Mono',monospace;--font-ui:'Rajdhani',sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;min-height:100vh;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;z-index:0;background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;animation:gridDrift 20s linear infinite}
+  @keyframes gridDrift{0%{transform:translate(0,0)}100%{transform:translate(40px,40px)}}
+  .particles{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .particle{position:absolute;width:2px;height:2px;background:var(--accent);border-radius:50%;opacity:0;animation:floatP linear infinite}
+  @keyframes floatP{0%{opacity:0;transform:translateY(100vh) scale(0)}10%{opacity:.5}90%{opacity:.5}100%{opacity:0;transform:translateY(-10vh) scale(1)}}
+  .wrapper{position:relative;z-index:1}
+
+  /* Topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px;background:rgba(255,255,255,.95);border-bottom:1px solid var(--border);backdrop-filter:blur(20px) saturate(1.4);position:sticky;top:0;z-index:100;animation:slideDown .5s cubic-bezier(.16,1,.3,1)}
+  @keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),#0066aa);border-radius:6px;display:grid;place-items:center;font-size:18px;animation:brandPulse 3s ease-in-out infinite}
+  @keyframes brandPulse{0%,100%{box-shadow:0 0 15px rgba(0,212,255,.3)}50%{box-shadow:0 0 25px rgba(0,212,255,.6)}}
+  .brand-name{font-family:var(--font-hd);font-weight:800;font-size:20px;letter-spacing:2px;color:var(--text)}
+  .brand-name span{color:var(--accent)}
+  nav{display:flex;gap:4px}
+  .nav-btn{padding:6px 16px;background:transparent;border:1px solid transparent;border-radius:4px;color:var(--text2);font-family:var(--font-ui);font-size:14px;font-weight:600;letter-spacing:1px;cursor:pointer;text-decoration:none;transition:all .25s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+  .nav-btn::after{content:'';position:absolute;bottom:0;left:50%;width:0;height:2px;background:var(--accent);transition:all .3s cubic-bezier(.16,1,.3,1);transform:translateX(-50%)}
+  .nav-btn:hover::after,.nav-btn.active::after{width:80%}
+  .nav-btn:hover,.nav-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+
+  .content{padding:28px;max-width:1100px;margin:0 auto}
+  .page-title{font-family:var(--font-hd);font-size:26px;font-weight:800;letter-spacing:2px;margin-bottom:24px;animation:fadeInUp .5s ease}
+  .page-title span{color:var(--accent)}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Planner card */
+  .planner-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:20px;transition:border-color .3s,box-shadow .3s;animation:cardFadeIn .6s ease backwards}
+  .planner-card:nth-child(2){animation-delay:.15s}
+  .planner-card:hover{border-color:rgba(0,212,255,.2);box-shadow:0 0 30px rgba(0,212,255,.06)}
+  @keyframes cardFadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .planner-card h3{font-family:var(--font-hd);font-size:16px;font-weight:700;letter-spacing:1px;margin-bottom:18px;color:var(--accent)}
+
+  .form-row{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+  .inp-group{display:flex;flex-direction:column;gap:5px;flex:1}
+  .inp-label{font-size:11px;letter-spacing:2px;color:var(--text2);text-transform:uppercase}
+  select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:7px;font-family:var(--font-mono);font-size:13px;outline:none;transition:border-color .3s,box-shadow .3s;width:100%}
+  select:focus{border-color:var(--accent);box-shadow:0 0 12px rgba(0,212,255,.15)}
+  select option{background:var(--bg3)}
+
+  .btn{padding:10px 22px;border-radius:7px;border:none;font-family:var(--font-ui);font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer;transition:all .25s cubic-bezier(.16,1,.3,1);display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden}
+  .btn::after{content:'';position:absolute;width:100%;height:100%;top:0;left:0;background:radial-gradient(circle,rgba(255,255,255,.2)10%,transparent 10%);transform:scale(10);opacity:0;transition:transform .5s,opacity .5s}
+  .btn:active::after{transform:scale(0);opacity:1;transition:0s}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:var(--glow)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,255,.5)}
+  .btn-outline{background:transparent;color:var(--text2);border:1px solid var(--border)}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+
+  /* Result card */
+  .result-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:24px;display:none;position:relative;overflow:hidden}
+  .result-card.show{display:block;animation:resultReveal .5s cubic-bezier(.16,1,.3,1)}
+  @keyframes resultReveal{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+  /* Glowing orb decoration */
+  .result-card::before{content:'';position:absolute;top:-50px;right:-50px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,.12),transparent 70%);animation:orbFloat 5s ease-in-out infinite}
+  @keyframes orbFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-10px,10px)}}
+
+  .route-path{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0;padding:16px;background:var(--bg3);border-radius:8px}
+  .route-node{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);padding:6px 14px;border-radius:20px;font-size:12px;font-family:var(--font-mono);color:var(--accent);transition:all .3s;animation:nodePop .4s cubic-bezier(.68,-.55,.265,1.55) backwards}
+  .route-node:hover{background:rgba(0,212,255,.2);transform:scale(1.1);box-shadow:0 0 12px rgba(0,212,255,.3)}
+  @keyframes nodePop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+  .route-arrow{color:var(--text2);font-size:14px;animation:arrowSlide .3s ease backwards}
+  @keyframes arrowSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+
+  .route-stats{display:flex;gap:24px;margin:16px 0}
+  .route-stat{text-align:center}
+  .rs-val{font-family:var(--font-hd);font-size:28px;font-weight:800;color:var(--green);transition:transform .3s}
+  .route-stat:hover .rs-val{transform:scale(1.1)}
+  .rs-label{font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+
+  .ai-advice{margin-top:16px;padding:16px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;color:var(--text);animation:adviceFade .6s ease .3s backwards}
+  @keyframes adviceFade{from{opacity:0}to{opacity:1}}
+
+  .spinner{width:18px;height:18px;border-radius:50%;border:2px solid rgba(0,212,255,.2);border-top-color:var(--accent);animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Routes table */
+  .routes-table{width:100%;border-collapse:collapse;font-size:13px}
+  .routes-table th{text-align:left;padding:10px 14px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border);font-family:var(--font-mono)}
+  .routes-table td{padding:10px 14px;border-bottom:1px solid rgba(26,48,80,.4);transition:background .2s}
+  .routes-table tr:last-child td{border-bottom:none}
+  .routes-table tr{transition:all .2s}
+  .routes-table tr:hover td{background:rgba(0,212,255,.06)}
+  .routes-table tr:hover{transform:scale(1.005)}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;font-family:var(--font-mono);transition:transform .2s}
+  .badge:hover{transform:scale(1.1)}
+  .badge.HIGH{background:rgba(255,45,85,.15);color:var(--red);border:1px solid rgba(255,45,85,.3)}
+  .badge.MEDIUM{background:rgba(255,204,0,.15);color:var(--yellow);border:1px solid rgba(255,204,0,.3)}
+  .badge.LOW{background:rgba(0,255,136,.15);color:var(--green);border:1px solid rgba(0,255,136,.3)}
+
+  #toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+  .toast{background:rgba(10,21,32,.95);border:1px solid var(--border);backdrop-filter:blur(12px);border-radius:10px;padding:14px 18px;min-width:300px;display:flex;align-items:center;gap:10px;animation:toastIn .4s cubic-bezier(.16,1,.3,1);font-size:13px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .toast.success{border-left:3px solid var(--green)}.toast.info{border-left:3px solid var(--accent)}.toast.error{border-left:3px solid var(--red)}
+  .toast.exiting{animation:toastOut .3s ease forwards}
+  @keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
+  @keyframes toastOut{to{transform:translateX(120%);opacity:0}}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="particles" id="particles"></div>
+<div class="wrapper">
+<div class="topbar">
+  <div class="brand"><div class="brand-icon" style="color:#fff; font-family:var(--font-mono); font-weight:bold; font-size:16px;">RT</div><div class="brand-name">ST<span>MS</span></div></div>
+  <nav>
+    <a href="/" class="nav-btn">DASHBOARD</a>
+    <a href="/signals" class="nav-btn">SIGNALS</a>
+    <a href="/routes-page" class="nav-btn active">ROUTES</a>
+    <a href="/reports-page" class="nav-btn">REPORTS</a>
+    <a href="/emergency-page" class="nav-btn">EMERGENCY</a>
+  </nav>
+  <div></div>
+</div>
+<div class="content">
+  <div class="page-title">ROUTE <span>PLANNER</span></div>
+
+  <div class="planner-card">
+    <h3>DIJKSTRA OPTIMAL ROUTE + AI ADVICE</h3>
+    <div class="form-row">
+      <div class="inp-group">
+        <div class="inp-label">Start Location</div>
+        <select id="start-sel"><option value="">Loading locations…</option></select>
+      </div>
+      <div class="inp-group">
+        <div class="inp-label">Destination</div>
+        <select id="end-sel"><option value="">Loading locations…</option></select>
+      </div>
+      <button class="btn btn-primary" onclick="getRoute()">Find Route</button>
+    </div>
+
+    <div class="result-card" id="result-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="color:var(--accent);font-family:var(--font-hd);font-size:18px;font-weight:700">OPTIMAL ROUTE</span>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2)" id="route-status"></span>
+      </div>
+      <div class="route-path" id="route-path"></div>
+      <div class="route-stats">
+        <div class="route-stat"><div class="rs-val" id="r-dist">--</div><div class="rs-label">Distance (km)</div></div>
+        <div class="route-stat"><div class="rs-val" id="r-time" style="color:var(--accent)">--</div><div class="rs-label">Est. Time (min)</div></div>
+      </div>
+      <div class="ai-advice">
+        <strong style="color:var(--accent);font-size:12px;letter-spacing:1px">AI ADVICE</strong><br>
+        <span id="ai-advice-text"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="planner-card">
+    <h3>ALL ROUTE SEGMENTS</h3>
+    <div style="overflow-x:auto">
+      <table class="routes-table">
+        <thead><tr><th>From</th><th>To</th><th>Distance</th><th>Travel Time</th><th>Traffic</th></tr></thead>
+        <tbody id="routes-tbody">
+          <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text2)"><div class="spinner" style="margin:auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+<div id="toast-container"></div>
+<script>
+// Particles
+(function(){const c=document.getElementById('particles');for(let i=0;i<25;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.animationDuration=(8+Math.random()*15)+'s';p.style.animationDelay=(Math.random()*10)+'s';p.style.width=p.style.height=(1+Math.random()*2)+'px';c.appendChild(p)}})();
+
+function toast(msg,type='info') { return; }
+
+async function loadLocations(){
+  const locs=await fetch('/api/routes/locations').then(r=>r.json());
+  const start=document.getElementById('start-sel'),end=document.getElementById('end-sel');
+  if(!locs||locs.length===0){start.innerHTML='<option value="">No locations – seed routes first</option>';end.innerHTML='<option value="">No locations – seed routes first</option>';return}
+  const opts=locs.map(l=>`<option value="${l}">${l}</option>`).join('');
+  start.innerHTML='<option value="">Select start…</option>'+opts;
+  end.innerHTML='<option value="">Select destination…</option>'+opts;
+}
+
+async function loadRoutes(){
+  const d=await fetch('/api/routes').then(r=>r.json());
+  const tbody=document.getElementById('routes-tbody');
+  tbody.innerHTML=d.routes.map((r,i)=>`<tr style="animation:fadeInUp .3s ${i*30}ms backwards">
+    <td style="font-weight:600">${r.start_point}</td>
+    <td>${r.end_point}</td>
+    <td style="font-family:var(--font-mono)">${r.distance} km</td>
+    <td style="font-family:var(--font-mono)">${r.travel_time} min</td>
+    <td><span class="badge ${r.traffic_status}">${r.traffic_status}</span></td>
+  </tr>`).join('');
+}
+
+async function getRoute(){
+  const start=document.getElementById('start-sel').value,end=document.getElementById('end-sel').value;
+  if(!start||!end){toast('Select both start and destination','error');return}
+  if(start===end){toast('Start and destination must be different','error');return}
+  toast('Computing Dijkstra optimal route…','info');
+  const d=await fetch(`/api/routes/recommend?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`).then(r=>r.json());
+  if(d.error){toast(d.error,'error');return}
+  const card=document.getElementById('result-card');
+  card.classList.add('show');
+  document.getElementById('route-status').textContent=d.status||'OPTIMAL';
+  document.getElementById('r-dist').textContent=d.total_distance_km||'--';
+  document.getElementById('r-time').textContent=d.estimated_travel_time_min||'--';
+  const path=d.recommended_path||[];
+  document.getElementById('route-path').innerHTML=path.map((n,i)=>`<span class="route-node" style="animation-delay:${i*100}ms">${n}</span>${i<path.length-1?'<span class="route-arrow" style="animation-delay:${i*100+50}ms">→</span>':''}`).join('');
+  document.getElementById('ai-advice-text').textContent=d.ai_advice||'AI advice unavailable.';
+}
+
+async function seedRoutes(){
+  toast('Seeding sample routes…','info');
+  const d=await fetch('/api/routes/seed',{method:'POST'}).then(r=>r.json());
+  toast(d.message,'success');
+  loadLocations();loadRoutes();
+}
+
+loadLocations();loadRoutes();
+</script>
+</body>
+</html>
