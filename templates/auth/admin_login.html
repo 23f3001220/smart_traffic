@@ -97,14 +97,14 @@
 <body>
 
 <div class="login-box">
-  <div class="login-title">ST<span>MS</span> LOGIN</div>
+  <div class="login-title">ADMIN <span>PORTAL</span></div>
   {% if error %}
     <div class="error-msg">{{ error }}</div>
   {% endif %}
   <form method="POST">
     <div class="input-group">
-      <label>Username</label>
-      <input type="text" name="username" required autocomplete="off">
+      <label>Username or Email</label>
+      <input type="text" name="username" required autocomplete="off" placeholder="Enter username or email">
     </div>
     <div class="input-group">
       <label>Password</label>
@@ -113,7 +113,9 @@
     <button type="submit" class="btn-submit">ENTER SYSTEM</button>
   </form>
   <div style="margin-top: 16px; font-size: 13px; color: var(--text2);">
-    Don't have an account? <a href="/register" style="color: var(--accent); text-decoration: none;">Register here</a>
+    <a href="/forgot_password" style="color: var(--accent); text-decoration: none;">Forgot Password?</a>
+    <br><br>
+    <a href="/" style="color: var(--text2); text-decoration: none;">← Change Portal</a>
   </div>
 </div>
 

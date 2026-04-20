@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>STMS · Register</title>
+<title>STMS · Login</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -97,27 +97,27 @@
 <body>
 
 <div class="login-box">
-  <div class="login-title">ST<span>MS</span> REGISTER</div>
+  <div class="login-title">COMMUTER <span>PORTAL</span></div>
   {% if error %}
     <div class="error-msg">{{ error }}</div>
   {% endif %}
   <form method="POST">
     <div class="input-group">
-      <label>New Username</label>
-      <input type="text" name="username" required autocomplete="off">
+      <label>Username or Email</label>
+      <input type="text" name="username" required autocomplete="off" placeholder="Enter username or email">
     </div>
     <div class="input-group">
-      <label>Email Address</label>
-      <input type="email" name="email" required autocomplete="off">
-    </div>
-    <div class="input-group">
-      <label>New Password</label>
+      <label>Password</label>
       <input type="password" name="password" required>
     </div>
-    <button type="submit" class="btn-submit">CREATE ACCOUNT</button>
+    <button type="submit" class="btn-submit">ENTER SYSTEM</button>
   </form>
   <div style="margin-top: 16px; font-size: 13px; color: var(--text2);">
-    Already have an account? <a href="/user_login" style="color: var(--accent); text-decoration: none;">Login</a>
+    Don't have an account? <a href="/register" style="color: var(--accent); text-decoration: none;">Register here</a>
+    <br><br>
+    <a href="/forgot_password" style="color: var(--accent); text-decoration: none;">Forgot Password?</a>
+    <br><br>
+    <a href="/" style="color: var(--text2); text-decoration: none;">← Change Portal</a>
   </div>
 </div>
 

@@ -6,6 +6,7 @@ Then: open http://localhost:5000
 """
 
 import os
+import random
 from dotenv import load_dotenv
 
 load_dotenv()  # Load .env file (GEMINI_API_KEY, etc.)
@@ -47,7 +48,7 @@ def create_app() -> Flask:
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if 'user_id' not in session:
-                return redirect(url_for('login'))
+                return redirect(url_for('index'))
             return f(*args, **kwargs)
         return decorated_function
 
@@ -72,49 +73,139 @@ def create_app() -> Flask:
     @app.route("/")
     def index():
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return render_template('landing.html')
         if session.get('role') == 'admin':
             return redirect(url_for('admin_dashboard'))
         return redirect(url_for('user_dashboard'))
 
-    @app.route("/login", methods=["GET", "POST"])
-    def login():
+    @app.route("/admin_login", methods=["GET", "POST"])
+    def admin_login():
         if request.method == "POST":
-            username = request.form.get("username", "").strip()
+            login_id = request.form.get("username", "").strip()
             password = request.form.get("password", "")
-            user = User.query.filter_by(username=username).first()
-            if user and user.check_password(password):
+            user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
+            if user and user.check_password(password) and user.role == 'admin':
                 session['user_id'] = user.id
                 session['role'] = user.role
                 return redirect(url_for('index'))
-            return render_template("auth/login.html", error="Invalid credentials")
-        return render_template("auth/login.html")
+            return render_template("auth/admin_login.html", error="Invalid admin credentials")
+        return render_template("auth/admin_login.html")
+
+    @app.route("/user_login", methods=["GET", "POST"])
+    def user_login():
+        if request.method == "POST":
+            login_id = request.form.get("username", "").strip() 
+            password = request.form.get("password", "")
+            user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
+            if user and user.check_password(password) and user.role == 'user':
+                session['user_id'] = user.id
+                session['role'] = user.role
+                return redirect(url_for('index'))
+            return render_template("auth/user_login.html", error="Invalid commuter credentials")
+        return render_template("auth/user_login.html")
 
     @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
             username = request.form.get("username", "").strip()
+            email = request.form.get("email", "").strip()
             password = request.form.get("password", "")
             
-            if not username or not password:
-                return render_template("auth/register.html", error="Username and Password are required")
+            if not username or not password or not email:
+                return render_template("auth/register.html", error="Username, Email, and Password are required")
                 
-            existing_user = User.query.filter_by(username=username).first()
+            existing_user = User.query.filter((User.username == username) | (User.email == email)).first()
             if existing_user:
-                return render_template("auth/register.html", error="Username already exists")
+                return render_template("auth/register.html", error="Username or Email already exists")
                 
-            new_user = User(username=username, role="user")
-            new_user.set_password(password)
-            db.session.add(new_user)
-            db.session.commit()
+            # Generate OTP
+            otp = str(random.randint(100000, 999999))
+            print("=" * 40)
+            print(f" OTP FOR REGISTRATION ({username}): {otp}")
+            print("=" * 40)
             
-            return redirect(url_for('login'))
+            # Store in session
+            session['register_data'] = {
+                'username': username,
+                'email': email,
+                'password': password,
+                'otp': otp
+            }
+            
+            return redirect(url_for('register_otp'))
         return render_template("auth/register.html")
+
+    @app.route("/register_otp", methods=["GET", "POST"])
+    def register_otp():
+        if 'register_data' not in session:
+            return redirect(url_for('register'))
+            
+        if request.method == "POST":
+            submitted_otp = request.form.get("otp", "").strip()
+            reg_data = session['register_data']
+            
+            if submitted_otp == reg_data['otp']:
+                new_user = User(username=reg_data['username'], email=reg_data.get('email'), role="user")
+                new_user.set_password(reg_data['password'])
+                db.session.add(new_user)
+                db.session.commit()
+                
+                # Clear session
+                session.pop('register_data', None)
+                return redirect(url_for('user_login'))
+            else:
+                return render_template("auth/register_otp.html", error="Invalid OTP")
+                
+        return render_template("auth/register_otp.html")
+
+    @app.route("/forgot_password", methods=["GET", "POST"])
+    def forgot_password():
+        if request.method == "POST":
+            login_id = request.form.get("username", "").strip()
+            user = User.query.filter((User.username == login_id) | (User.email == login_id)).first()
+            
+            if user:
+                otp = str(random.randint(100000, 999999))
+                print("=" * 40)
+                print(f" OTP FOR PASSWORD RESET ({user.username}): {otp}")
+                print("=" * 40)
+                
+                session['reset_data'] = {
+                    'username': user.username,
+                    'otp': otp
+                }
+                return redirect(url_for('reset_password'))
+            else:
+                return render_template("auth/forgot_password.html", error="User not found")
+                
+        return render_template("auth/forgot_password.html")
+
+    @app.route("/reset_password", methods=["GET", "POST"])
+    def reset_password():
+        if 'reset_data' not in session:
+            return redirect(url_for('forgot_password'))
+            
+        if request.method == "POST":
+            submitted_otp = request.form.get("otp", "").strip()
+            new_password = request.form.get("password", "")
+            reset_data = session['reset_data']
+            
+            if submitted_otp == reset_data['otp'] and new_password:
+                user = User.query.filter_by(username=reset_data['username']).first()
+                if user:
+                    user.set_password(new_password)
+                    db.session.commit()
+                    session.pop('reset_data', None)
+                    return redirect(url_for('user_login'))
+            else:
+                return render_template("auth/reset_password.html", error="Invalid OTP or Password missing")
+                
+        return render_template("auth/reset_password.html")
 
     @app.route("/logout")
     def logout():
         session.clear()
-        return redirect(url_for('login'))
+        return redirect(url_for('index'))
 
     @app.route("/admin_dashboard")
     @login_required
@@ -180,10 +271,10 @@ def create_app() -> Flask:
 def _seed_admin_if_empty():
     """Seed initial admin user and a test user."""
     if User.query.count() == 0:
-        admin = User(username="admin", role="admin")
+        admin = User(username="admin", email="admin@stms.com", role="admin")
         admin.set_password("admin")
         db.session.add(admin)
-        user = User(username="user1", role="user")
+        user = User(username="user1", email="user1@stms.com", role="user")
         user.set_password("password")
         db.session.add(user)
         db.session.commit()

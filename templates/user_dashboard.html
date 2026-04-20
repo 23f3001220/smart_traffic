@@ -312,8 +312,8 @@ async function refreshData() {
   // Big Status Card
   html += `
     <div class="route-status-card">
-      <div class="time-lg">${res.total_time_mins.toFixed(0)} min</div>
-      <div style="font-size:14px; color:var(--text2); margin-bottom:12px;">Distance: ${res.total_distance_km.toFixed(1)} km</div>
+      <div class="time-lg">${Number(res.estimated_travel_time_min || 0).toFixed(0)} min</div>
+      <div style="font-size:14px; color:var(--text2); margin-bottom:12px;">Distance: ${Number(res.total_distance_km || 0).toFixed(1)} km</div>
       <div style="font-size:12px; color:var(--text); line-height:1.6; font-family:var(--font-mono);">
         <span style="color:var(--text2)">Via:</span> ${res.recommended_path.join(' ➝ ')}
       </div>
